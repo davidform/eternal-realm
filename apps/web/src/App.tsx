@@ -313,7 +313,7 @@ export function App() {
                 <img alt="" aria-hidden="true" src={HERO_ART[characterClass]} />
                 <div>
                   <strong>{CLASS_DEFINITIONS[characterClass].label}</strong>
-                  <small>Lv {snapshot.level} · {snapshot.gold.toLocaleString()} Aden</small>
+                  <small>Lv {snapshot.level} · {snapshot.gold.toLocaleString()} Gold</small>
                   <span className="hud-meter hud-meter--hp"><i style={{ width: `${(snapshot.playerHp / snapshot.playerMaxHp) * 100}%` }} /></span>
                   <span className="hud-meter hud-meter--mp"><i style={{ width: `${(snapshot.playerMp / snapshot.playerMaxMp) * 100}%` }} /></span>
                 </div>
