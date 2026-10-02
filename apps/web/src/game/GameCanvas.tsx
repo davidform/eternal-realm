@@ -21,7 +21,7 @@ export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: G
     const scene = new GameScene({ characterClass, onSnapshot, onRestart });
     sceneRef.current = scene;
     const game = new Phaser.Game({
-      type: Phaser.AUTO,
+      type: Phaser.CANVAS,
       width: 960,
       height: 600,
       parent: containerRef.current,
