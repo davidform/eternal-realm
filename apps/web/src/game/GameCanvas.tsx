@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import type { CharacterClass } from "@eternal-realm/shared-types";
 import { GameScene } from "./GameScene.js";
@@ -14,11 +14,12 @@ interface GameCanvasProps {
 export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: GameCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GameScene | null>(null);
+  const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
 
-    const scene = new GameScene({ characterClass, onSnapshot, onRestart });
+    const scene = new GameScene({ characterClass, onSnapshot, onRestart, onReady: () => setIsReady(true) });
     sceneRef.current = scene;
     const game = new Phaser.Game({
       type: Phaser.CANVAS,
@@ -48,12 +49,15 @@ export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: G
   }, [command]);
 
   return (
-    <div
-      className="game-canvas"
-      ref={containerRef}
-      aria-label="Eternal Realm game scene"
-      onPointerDown={() => containerRef.current?.focus()}
-      tabIndex={0}
-    />
+    <div className="game-canvas" aria-label="Eternal Realm game scene" onPointerDown={(event) => event.currentTarget.focus()} tabIndex={0}>
+      <div className="game-render-surface" ref={containerRef} />
+      {!isReady ? (
+        <div className="game-loading">
+          <span />
+          <strong>Opening Green Meadow</strong>
+          <small>Gathering heroes, creatures, and shard-light…</small>
+        </div>
+      ) : null}
+    </div>
   );
 }

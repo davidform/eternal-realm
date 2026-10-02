@@ -94,12 +94,14 @@ interface GameSceneOptions {
   characterClass: CharacterClass;
   onSnapshot: (snapshot: GameSnapshot) => void;
   onRestart: () => void;
+  onReady: () => void;
 }
 
 export class GameScene extends Phaser.Scene {
   private readonly characterClass: CharacterClass;
   private readonly onSnapshot: (snapshot: GameSnapshot) => void;
   private readonly onRestart: () => void;
+  private readonly onReady: () => void;
   private readonly audio = new GameAudio();
   private player!: Phaser.Physics.Arcade.Sprite;
   private playerShadow!: Phaser.GameObjects.Ellipse;
@@ -144,11 +146,12 @@ export class GameScene extends Phaser.Scene {
   private bossTreasureCollected = false;
   private combatLog: string[] = [];
 
-  constructor({ characterClass, onSnapshot, onRestart }: GameSceneOptions) {
+  constructor({ characterClass, onSnapshot, onRestart, onReady }: GameSceneOptions) {
     super({ key: "GameScene" });
     this.characterClass = characterClass;
     this.onSnapshot = onSnapshot;
     this.onRestart = onRestart;
+    this.onReady = onReady;
   }
 
   preload() {
@@ -166,6 +169,7 @@ export class GameScene extends Phaser.Scene {
     this.createMonsters();
     this.createInput();
     this.configureCamera();
+    this.onReady();
     this.pushLog(`${CLASS_DEFINITIONS[this.characterClass].label} entered Green Meadow.`);
     this.pushLog("Scout Lyra is waiting nearby. Press E to begin the quest chain.");
   }
