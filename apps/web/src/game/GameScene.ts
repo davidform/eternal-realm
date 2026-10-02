@@ -152,6 +152,9 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
+    this.load.on("filecomplete", (key: string) => console.info(`[Eternal Realm] loaded ${key}`));
+    this.load.on("loaderror", (file: Phaser.Loader.File) => console.error(`[Eternal Realm] failed ${file.key}: ${file.src}`));
+    this.load.on("complete", () => console.info("[Eternal Realm] scene assets complete"));
     this.load.image("meadow-ground", `${import.meta.env.BASE_URL}art/green-meadow-ground-v2.png`);
     this.load.image("player-art", HERO_ART[this.characterClass]);
     for (const [monster, path] of Object.entries(MONSTER_ART)) {
