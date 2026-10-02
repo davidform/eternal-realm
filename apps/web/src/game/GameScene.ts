@@ -114,6 +114,8 @@ export class GameScene extends Phaser.Scene {
   private playerScaleX = 1;
   private playerScaleY = 1;
   private playerActionUntil = 0;
+  private currentTarget: MonsterActor | null = null;
+  private targetMarker!: Phaser.GameObjects.Ellipse;
   private keys!: Record<
     "up" | "down" | "left" | "right" | "dodge" | "attack" | "skill1" | "skill2" | "skill3" | "potion" | "interact" | "equip" | "restart",
     Phaser.Input.Keyboard.Key
@@ -142,7 +144,6 @@ export class GameScene extends Phaser.Scene {
   private dodgeUntil = 0;
   private invulnerableUntil = 0;
   private dodgeDirection = new Phaser.Math.Vector2(1, 0);
-  private virtualDirection = new Phaser.Math.Vector2(0, 0);
   private nextCooldownSnapshotAt = 0;
   private hitStopUntil = 0;
   private questAccepted = false;
@@ -226,14 +227,9 @@ export class GameScene extends Phaser.Scene {
     if (this.status !== "PLAYING") return;
     if (command.type === "ATTACK") this.attackNearestMonster(this.time.now);
     else if (command.type === "DODGE") this.dodge(this.time.now);
-    else if (command.type === "INTERACT") this.interactWithLyra();
     else if (command.type === "SKILL") this.useSkill(command.skillIndex, this.time.now);
     else if (command.type === "POTION") this.usePotion();
     else this.equipItemAt(command.inventoryIndex);
-  }
-
-  setVirtualDirection(x: number, y: number) {
-    this.virtualDirection.set(x, y);
   }
 
   private createMap() {
@@ -513,9 +509,17 @@ export class GameScene extends Phaser.Scene {
         baseScaleY: sprite.scaleY,
         actionUntil: 0
       };
+      sprite.setInteractive({ useHandCursor: true });
+      sprite.on("pointerdown", () => {
+        if (actor.unlocked && actor.state !== "DEAD") this.selectTarget(actor);
+      });
       if (spawn.role === "BOSS") this.boss = actor;
       return actor;
     });
+    this.targetMarker = this.add.ellipse(0, 0, 84, 30)
+      .setStrokeStyle(3, 0xffc866, 0.95)
+      .setDepth(2)
+      .setVisible(false);
   }
 
   private createInput() {
@@ -548,8 +552,8 @@ export class GameScene extends Phaser.Scene {
       this.player.setVelocity(this.dodgeDirection.x * DODGE_SPEED, this.dodgeDirection.y * DODGE_SPEED);
       return;
     }
-    const horizontal = Phaser.Math.Clamp(Number(this.keys.right.isDown) - Number(this.keys.left.isDown) + this.virtualDirection.x, -1, 1);
-    const vertical = Phaser.Math.Clamp(Number(this.keys.down.isDown) - Number(this.keys.up.isDown) + this.virtualDirection.y, -1, 1);
+    const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
+    const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
     const velocity = new Phaser.Math.Vector2(horizontal, vertical);
     if (velocity.lengthSq() > 0) velocity.normalize().scale(PLAYER_SPEED);
     this.player.setVelocity(velocity.x, velocity.y);
@@ -567,8 +571,8 @@ export class GameScene extends Phaser.Scene {
 
   private dodge(time: number) {
     if (time < this.dodgeReadyAt) return;
-    const horizontal = Phaser.Math.Clamp(Number(this.keys.right.isDown) - Number(this.keys.left.isDown) + this.virtualDirection.x, -1, 1);
-    const vertical = Phaser.Math.Clamp(Number(this.keys.down.isDown) - Number(this.keys.up.isDown) + this.virtualDirection.y, -1, 1);
+    const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
+    const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
     this.dodgeDirection.set(horizontal, vertical);
     if (this.dodgeDirection.lengthSq() === 0) this.dodgeDirection.set(this.player.flipX ? -1 : 1, 0);
     this.dodgeDirection.normalize();
@@ -681,12 +685,17 @@ export class GameScene extends Phaser.Scene {
     }
     if (time < this.nextPlayerAttackAt) return;
     const range = ATTACK_RANGES[this.characterClass];
-    const target = this.findNearestMonster(range);
+    const selectedTarget = this.currentTarget && this.currentTarget.state !== "DEAD" && this.currentTarget.unlocked
+      && Phaser.Math.Distance.Between(this.player.x, this.player.y, this.currentTarget.sprite.x, this.currentTarget.sprite.y) <= range
+      ? this.currentTarget
+      : undefined;
+    const target = selectedTarget ?? this.findNearestMonster(range);
 
     if (!target) {
       this.pushLog("No enemy in attack range.");
       return;
     }
+    this.selectTarget(target, false);
 
     const result = basicAttack(
       this.createPlayerCombatant(),
@@ -733,11 +742,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     const targets = this.findMonstersInRange(skill.range);
-    const primaryTarget = targets[0];
+    const primaryTarget = this.currentTarget && targets.includes(this.currentTarget) ? this.currentTarget : targets[0];
     if (!primaryTarget) {
       this.pushLog(`No enemy in range for ${skill.name}.`);
       return;
     }
+    this.selectTarget(primaryTarget, false);
 
     this.playerMp -= skill.mpCost;
     this.skillReady[skillIndex] = false;
@@ -1071,6 +1081,10 @@ export class GameScene extends Phaser.Scene {
 
   private handleMonsterDeath(actor: MonsterActor) {
     actor.state = "DEAD";
+    if (this.currentTarget === actor) {
+      this.currentTarget = null;
+      this.targetMarker.setVisible(false);
+    }
     actor.sprite.setVelocity(0, 0);
     this.tweens.add({
       targets: actor.sprite,
@@ -1352,6 +1366,21 @@ export class GameScene extends Phaser.Scene {
       actor.hpTrack.setPosition(actor.sprite.x - 30, actor.sprite.y - offset + 15);
       actor.hpFill.setPosition(actor.sprite.x - 30, actor.sprite.y - offset + 15);
     }
+    if (this.currentTarget && this.currentTarget.state !== "DEAD") {
+      this.targetMarker
+        .setPosition(this.currentTarget.sprite.x, this.currentTarget.sprite.y + this.currentTarget.sprite.displayHeight * 0.3)
+        .setDisplaySize(this.currentTarget.sprite.displayWidth * 0.82, this.currentTarget.sprite.displayHeight * 0.28)
+        .setVisible(true);
+    }
+  }
+
+  private selectTarget(actor: MonsterActor, emit = true) {
+    this.currentTarget = actor;
+    this.targetMarker
+      .setPosition(actor.sprite.x, actor.sprite.y + actor.sprite.displayHeight * 0.3)
+      .setDisplaySize(actor.sprite.displayWidth * 0.82, actor.sprite.displayHeight * 0.28)
+      .setVisible(true);
+    if (emit) this.emitSnapshot();
   }
 
   private flashTarget(target: Phaser.GameObjects.Sprite, color: number) {
@@ -1460,6 +1489,9 @@ export class GameScene extends Phaser.Scene {
       bossUnlocked: this.boss.unlocked,
       bossDefeated: this.bossDefeated,
       bossPhase: this.boss.enraged ? 2 : 1,
+      targetName: this.currentTarget?.state === "DEAD" ? null : this.currentTarget?.definition.name ?? null,
+      targetHp: this.currentTarget?.state === "DEAD" ? 0 : this.currentTarget?.currentHp ?? 0,
+      targetMaxHp: this.currentTarget?.definition.maxHp ?? 0,
       inventory: this.inventory,
       equipped: this.equipped,
       potions: this.potions,

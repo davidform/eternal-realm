@@ -19,7 +19,6 @@ export interface QuestStepSnapshot {
 export type GameCommand =
   | { id: number; type: "ATTACK" }
   | { id: number; type: "DODGE" }
-  | { id: number; type: "INTERACT" }
   | { id: number; type: "SKILL"; skillIndex: number }
   | { id: number; type: "POTION" }
   | { id: number; type: "EQUIP"; inventoryIndex: number };
@@ -42,6 +41,9 @@ export interface GameSnapshot {
   bossUnlocked: boolean;
   bossDefeated: boolean;
   bossPhase: 1 | 2;
+  targetName: string | null;
+  targetHp: number;
+  targetMaxHp: number;
   inventory: LootReward[];
   equipped: LootReward | null;
   potions: number;

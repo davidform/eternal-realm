@@ -80,6 +80,9 @@ function createInitialSnapshot(characterClass: CharacterClass, status: RunStatus
     bossUnlocked: false,
     bossDefeated: false,
     bossPhase: 1,
+    targetName: null,
+    targetHp: 0,
+    targetMaxHp: 0,
     inventory: [],
     equipped: null,
     potions: 3,
@@ -149,6 +152,7 @@ export function App() {
   const commandId = useRef(0);
   const handleSnapshot = useCallback((next: GameSnapshot) => setSnapshot(next), []);
   const stats = snapshot.stats;
+  const currentQuest = snapshot.questSteps.find((step) => step.status === "CURRENT");
 
   const startRunAs = useCallback((runClass: CharacterClass) => {
     setCommand(null);
@@ -217,7 +221,7 @@ export function App() {
   }, [snapshot.experience, snapshot.experienceToNextLevel]);
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${isPlaying ? "app-shell--playing" : ""}`}>
       <header className="topbar">
         <div>
           <p className="eyebrow">GREEN MEADOW · PLAYABLE VERTICAL SLICE</p>
@@ -254,8 +258,8 @@ export function App() {
         )}
       </section>
 
-      <div className="prototype-grid">
-        <section className="game-stage">
+      <div className={`prototype-grid ${isPlaying ? "prototype-grid--playing" : ""}`}>
+        <section className={`game-stage ${isPlaying ? "game-stage--playing" : ""}`}>
           {showTown && chapterSave ? (
             <div className="town-hub">
               <img className="town-hero" src={HERO_ART[chapterSave.characterClass]} alt={`${CLASS_DEFINITIONS[chapterSave.characterClass].label} in Oakvale`} />
@@ -302,6 +306,73 @@ export function App() {
             </div>
           )}
 
+          {isPlaying ? (
+            <div className="mmorpg-hud">
+              <img alt="" aria-hidden="true" className="hud-ornate-frame" src={`${import.meta.env.BASE_URL}art/eternal-realm-hud-frame.png`} />
+              <section className="hud-player" aria-label="Character status">
+                <img alt="" aria-hidden="true" src={HERO_ART[characterClass]} />
+                <div>
+                  <strong>{CLASS_DEFINITIONS[characterClass].label}</strong>
+                  <small>Lv {snapshot.level} · {snapshot.gold.toLocaleString()} Aden</small>
+                  <span className="hud-meter hud-meter--hp"><i style={{ width: `${(snapshot.playerHp / snapshot.playerMaxHp) * 100}%` }} /></span>
+                  <span className="hud-meter hud-meter--mp"><i style={{ width: `${(snapshot.playerMp / snapshot.playerMaxMp) * 100}%` }} /></span>
+                </div>
+              </section>
+
+              <div className="hud-location">
+                <span>THE EASTERN WILDS</span>
+                <strong>Green Meadow</strong>
+                <small>Safe zone ends beyond Oakvale Road</small>
+              </div>
+
+              {snapshot.targetName ? (
+                <section className="hud-target" aria-label="Selected target">
+                  <small>TARGET</small>
+                  <strong>{snapshot.targetName}</strong>
+                  <span className="hud-meter hud-meter--target"><i style={{ width: `${(snapshot.targetHp / snapshot.targetMaxHp) * 100}%` }} /></span>
+                  <em>{snapshot.targetHp} / {snapshot.targetMaxHp}</em>
+                </section>
+              ) : null}
+
+              <section className="hud-minimap" aria-label="Area map">
+                <header><span>Green Meadow</span><small>12:48 · Clear</small></header>
+                <div className="hud-minimap__field">
+                  <i className="map-road map-road--one" /><i className="map-road map-road--two" />
+                  <b className="map-marker map-marker--player" title="Player" />
+                  {!snapshot.questAccepted ? <b className="map-marker map-marker--quest" title="Scout Lyra" /> : null}
+                  {snapshot.bossUnlocked ? <b className="map-marker map-marker--boss" title="Gorvak" /> : null}
+                </div>
+                <footer>X 0330 · Y 0600</footer>
+              </section>
+
+              <section className="hud-quest-track">
+                <span>QUEST TRACKER</span>
+                <strong>{currentQuest?.label ?? "Green Meadow Cleared"}</strong>
+                <small>{snapshot.objective}</small>
+              </section>
+
+              <section className="hud-chat" aria-label="System messages">
+                <nav><b>ALL</b><span>COMBAT</span><span>SYSTEM</span></nav>
+                {snapshot.combatLog.slice(0, 3).reverse().map((entry, index) => <p key={`${entry}-${index}`}>{entry}</p>)}
+              </section>
+
+              <nav className="hud-hotbar" aria-label="Combat hotbar">
+                <button onClick={() => sendCommand({ type: "ATTACK" })} title="Basic Attack" type="button"><kbd>Space</kbd><b>⚔</b><small>Attack</small></button>
+                {snapshot.skills.map((skill, index) => (
+                  <button disabled={!skill.ready || snapshot.playerMp < skill.mpCost} key={skill.name} onClick={() => sendCommand({ type: "SKILL", skillIndex: index })} title={skill.name} type="button">
+                    <kbd>{index + 1}</kbd><b style={{ color: `#${skill.color.toString(16).padStart(6, "0")}` }}>{index === 0 ? "◆" : index === 1 ? "✦" : "✹"}</b>
+                    <small>{skill.ready ? skill.name : `${(skill.cooldownRemainingMs / 1000).toFixed(1)}s`}</small>
+                  </button>
+                ))}
+                <button disabled={!snapshot.dodgeReady} onClick={() => sendCommand({ type: "DODGE" })} title="Dodge" type="button"><kbd>Shift</kbd><b>➜</b><small>{snapshot.dodgeReady ? "Dodge" : `${(snapshot.dodgeCooldownRemainingMs / 1000).toFixed(1)}s`}</small></button>
+                <button disabled={snapshot.potions === 0} onClick={() => sendCommand({ type: "POTION" })} title="Healing Potion" type="button"><kbd>Q</kbd><b>✚</b><small>Potion ×{snapshot.potions}</small></button>
+                <button disabled={snapshot.inventory.length === 0} onClick={() => sendCommand({ type: "EQUIP", inventoryIndex: 0 })} title="Equip newest item" type="button"><kbd>F</kbd><b>◈</b><small>Equip</small></button>
+              </nav>
+
+              <button className="hud-exit" onClick={() => { setIsPlaying(false); setShowTown(false); }} type="button">ESC · Exit Adventure</button>
+            </div>
+          ) : null}
+
           {isPlaying && snapshot.status !== "PLAYING" ? (
             <div className={`run-result run-result--${snapshot.status.toLowerCase()}`}>
               <p>{snapshot.status === "VICTORY" ? "BOSS TREASURE CLAIMED" : "YOUR JOURNEY ENDS HERE"}</p>
@@ -347,7 +418,7 @@ export function App() {
             </dl>
           </GamePanel>
 
-          <GamePanel title="Action Bar">
+          {!isPlaying ? <GamePanel title="Action Bar">
             <div className="action-bar">
               <button
                 className={snapshot.dodgeReady ? "" : "action-slot--cooldown"}
@@ -385,7 +456,7 @@ export function App() {
                 <span className="action-icon action-icon--potion">✚</span><kbd>Q</kbd><span className="action-name">Healing Potion</span><small>{snapshot.potions} left</small>
               </button>
             </div>
-          </GamePanel>
+          </GamePanel> : null}
 
           <GamePanel title="Quest">
             <p className="objective">{snapshot.objective}</p>

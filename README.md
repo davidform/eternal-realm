@@ -19,13 +19,14 @@ Eternal Realm 的第一個可玩 Vertical Slice。本 repository 已建立 monor
 - **Boss Mechanics**：Gorvak Earthshake 範圍警示、可閃避傷害與半血狂暴階段
 - **Game Feel Pass**：角色與怪物待機／移動／攻擊／死亡動態、戰鬥與掉寶合成音效
 - **Combat Feel Pass II**：Shift 無敵翻滾、技能冷卻倒數、技能圖示、命中停頓／衝擊波，以及 Boss 技能名稱與階段標題
-- **Touch Controls**：手機／平板可用畫面方向鍵、互動、翻滾、普攻、三技能與藥水完成整個關卡
 - **Map Collision Pass**：Moonmere Pond、倒木、岩石與營地障礙具有玩家碰撞
 - **Skills & Equipment UI**：四職業各三個主動技能、獨立冷卻、單體／範圍傷害，以及可點選的武器裝備介面
 - **Chapter I Quest Chain**：清除前線、收集三枚碎片、Captain Ruk 精英戰、Gorvak 營地與寶藏結尾
 - **Gorvak Phase II**：半血召喚兩名護衛，並在強化地震之外追加可閃避的 Crown Charge
 - **Oakvale Return Hub**：通關後返回村莊，保存英雄、最佳等級、Gold、裝備、背包與通關次數；重新整理後仍可查看並重玩第一章
 - **Green Meadow Visual Pass II**：手繪草地、道路層次、環境霧氣、池塘光紋、營地魔法陣、萤火粒子與角色／怪物地面陰影
+- **Desktop MMORPG Interface**：PC 專用經典資訊配置、目標點選與鎖定圈、玩家／目標血條、小地圖、任務追蹤、聊天訊息、快捷列及右側角色面板
+- **Original Ornate HUD Art**：原創黑鐵、石材與藍水晶桌面視窗框，不使用既有遊戲的角色、圖示、標誌或地圖素材
 - **GitHub Pages Ready**：推送到 `main` 後自动构建网页版本，线上版使用浏览器存档，不依赖本机 API
 
 既定規則集中在 `packages/game-data`：EXP ×1000、Rare Treasure ×100、Boss Treasure 100%。
@@ -71,10 +72,12 @@ pnpm dev
 
 遊戲操作：
 
+- 本遊戲以桌面鍵盤與滑鼠操作為準，不製作手機觸控版
 - `↑ ↓ ← →`：移動
 - `Shift`：朝移動方向翻滾；短暫無敵，冷卻 1.5 秒
 - `E`：與 Scout Lyra 對話並接取任務
-- `Space`：攻擊範圍內最近的敵人
+- 滑鼠點選怪物：選取目標並顯示金色鎖定圈
+- `Space`：優先攻擊已選取且在範圍內的目標，否則攻擊最近敵人
 - `1`、`2`、`3`：施放三個職業主動技能
 - `Q`：使用治療藥水
 - `F`：裝備 Loot Bag 中最新的裝備
