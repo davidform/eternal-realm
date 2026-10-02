@@ -45,8 +45,8 @@ export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: G
   }, [characterClass, onRestart, onSnapshot]);
 
   useEffect(() => {
-    if (command) sceneRef.current?.runCommand(command);
-  }, [command]);
+    if (command && isReady) sceneRef.current?.runCommand(command);
+  }, [command, isReady]);
 
   return (
     <div className="game-canvas" aria-label="Eternal Realm game scene" onPointerDown={(event) => event.currentTarget.focus()} tabIndex={0}>
