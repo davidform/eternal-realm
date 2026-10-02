@@ -1,0 +1,31 @@
+{
+  "name": "@eternal-realm/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm run build && concurrently --kill-others-on-fail --names rebuild,serve \"vite build --watch --configLoader runner\" \"vite preview --configLoader runner\"",
+    "dev:hmr": "vite --configLoader runner",
+    "build": "tsc -b && vite build --configLoader runner",
+    "typecheck": "tsc -b --pretty false",
+    "preview": "vite preview --configLoader runner"
+  },
+  "dependencies": {
+    "@eternal-realm/game-core": "workspace:*",
+    "@eternal-realm/game-data": "workspace:*",
+    "@eternal-realm/shared-types": "workspace:*",
+    "@eternal-realm/ui": "workspace:*",
+    "phaser": "3.90.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.18.6",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@vitejs/plugin-react": "5.0.4",
+    "concurrently": "9.2.1",
+    "typescript": "5.9.2",
+    "vite": "7.1.7"
+  }
+}
