@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import Phaser from "phaser";
 import type { CharacterClass } from "@eternal-realm/shared-types";
 import { GameScene } from "./GameScene.js";
@@ -14,7 +14,34 @@ interface GameCanvasProps {
 export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: GameCanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const sceneRef = useRef<GameScene | null>(null);
+  const localCommandId = useRef(0);
   const [isReady, setIsReady] = useState(false);
+
+  function runAction(type: "ATTACK" | "DODGE" | "INTERACT" | "POTION") {
+    if (!isReady) return;
+    localCommandId.current += 1;
+    sceneRef.current?.runCommand({ id: localCommandId.current, type });
+  }
+
+  function runSkill(skillIndex: number) {
+    if (!isReady) return;
+    localCommandId.current += 1;
+    sceneRef.current?.runCommand({ id: localCommandId.current, type: "SKILL", skillIndex });
+  }
+
+  function startMove(x: number, y: number) {
+    return (event: PointerEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      sceneRef.current?.setVirtualDirection(x, y);
+    };
+  }
+
+  function stopMove(event: PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    sceneRef.current?.setVirtualDirection(0, 0);
+  }
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -56,6 +83,25 @@ export function GameCanvas({ characterClass, command, onSnapshot, onRestart }: G
           <span />
           <strong>Opening Green Meadow</strong>
           <small>Gathering heroes, creatures, and shard-light…</small>
+        </div>
+      ) : null}
+      {isReady ? (
+        <div className="touch-controls" aria-label="Touch controls">
+          <div className="touch-dpad" aria-label="Movement controls">
+            <button aria-label="Move up" className="touch-up" onPointerCancel={stopMove} onPointerDown={startMove(0, -1)} onPointerUp={stopMove} type="button">↑</button>
+            <button aria-label="Move left" className="touch-left" onPointerCancel={stopMove} onPointerDown={startMove(-1, 0)} onPointerUp={stopMove} type="button">←</button>
+            <button aria-label="Talk" className="touch-talk" onClick={() => runAction("INTERACT")} type="button">E</button>
+            <button aria-label="Move right" className="touch-right" onPointerCancel={stopMove} onPointerDown={startMove(1, 0)} onPointerUp={stopMove} type="button">→</button>
+            <button aria-label="Move down" className="touch-down" onPointerCancel={stopMove} onPointerDown={startMove(0, 1)} onPointerUp={stopMove} type="button">↓</button>
+          </div>
+          <div className="touch-actions" aria-label="Combat controls">
+            {[0, 1, 2].map((skillIndex) => (
+              <button aria-label={`Skill ${skillIndex + 1}`} key={skillIndex} onClick={() => runSkill(skillIndex)} type="button">{skillIndex + 1}</button>
+            ))}
+            <button aria-label="Dodge" className="touch-dodge" onClick={() => runAction("DODGE")} type="button">➜</button>
+            <button aria-label="Basic attack" className="touch-attack" onClick={() => runAction("ATTACK")} type="button">⚔</button>
+            <button aria-label="Healing potion" className="touch-potion" onClick={() => runAction("POTION")} type="button">✚</button>
+          </div>
         </div>
       ) : null}
     </div>

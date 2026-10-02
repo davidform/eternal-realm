@@ -250,6 +250,65 @@ h1 {
   display: block;
 }
 
+.touch-controls {
+  position: absolute;
+  z-index: 11;
+  right: 10px;
+  bottom: 10px;
+  left: 10px;
+  display: none;
+  align-items: flex-end;
+  justify-content: space-between;
+  pointer-events: none;
+  user-select: none;
+}
+
+.touch-controls button {
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(169, 202, 235, 0.58);
+  border-radius: 9px;
+  color: #edf7ff;
+  background: rgba(9, 20, 35, 0.78);
+  box-shadow: inset 0 0 14px rgba(91, 161, 215, 0.18), 0 3px 10px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(3px);
+  pointer-events: auto;
+  touch-action: none;
+  font-size: 0.82rem;
+  font-weight: 850;
+}
+
+.touch-controls button:active {
+  border-color: #f1d37f;
+  background: rgba(47, 75, 101, 0.9);
+  transform: scale(0.94);
+}
+
+.touch-dpad {
+  display: grid;
+  grid-template: repeat(3, 34px) / repeat(3, 34px);
+  gap: 3px;
+}
+
+.touch-up { grid-area: 1 / 2; }
+.touch-left { grid-area: 2 / 1; }
+.touch-talk { grid-area: 2 / 2; color: #f1d37f !important; }
+.touch-right { grid-area: 2 / 3; }
+.touch-down { grid-area: 3 / 2; }
+
+.touch-actions {
+  display: grid;
+  grid-template-columns: repeat(3, 37px);
+  gap: 5px;
+}
+
+.touch-actions button { height: 37px; }
+.touch-actions button:nth-child(-n + 3) { color: #f5d17d; }
+.touch-actions .touch-dodge { color: #7ed4ff; }
+.touch-actions .touch-attack { color: #ffe6a6; border-color: rgba(241, 205, 117, 0.78); }
+.touch-actions .touch-potion { color: #82e2ad; }
+
 .launch-screen {
   display: grid;
   grid-template-columns: minmax(260px, 42%) minmax(320px, 1fr);
@@ -805,4 +864,8 @@ kbd {
   .controls-hint kbd { font-size: 0.68rem; margin: 0; }
   .topbar-statuses { flex-direction: column; align-items: flex-end; }
   .save-status { display: none; }
+}
+
+@media (hover: none) and (pointer: coarse), (max-width: 680px) {
+  .touch-controls { display: flex; }
 }

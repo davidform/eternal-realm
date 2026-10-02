@@ -19,6 +19,7 @@ Eternal Realm 的第一個可玩 Vertical Slice。本 repository 已建立 monor
 - **Boss Mechanics**：Gorvak Earthshake 範圍警示、可閃避傷害與半血狂暴階段
 - **Game Feel Pass**：角色與怪物待機／移動／攻擊／死亡動態、戰鬥與掉寶合成音效
 - **Combat Feel Pass II**：Shift 無敵翻滾、技能冷卻倒數、技能圖示、命中停頓／衝擊波，以及 Boss 技能名稱與階段標題
+- **Touch Controls**：手機／平板可用畫面方向鍵、互動、翻滾、普攻、三技能與藥水完成整個關卡
 - **Map Collision Pass**：Moonmere Pond、倒木、岩石與營地障礙具有玩家碰撞
 - **Skills & Equipment UI**：四職業各三個主動技能、獨立冷卻、單體／範圍傷害，以及可點選的武器裝備介面
 - **Chapter I Quest Chain**：清除前線、收集三枚碎片、Captain Ruk 精英戰、Gorvak 營地與寶藏結尾

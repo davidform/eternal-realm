@@ -142,6 +142,7 @@ export class GameScene extends Phaser.Scene {
   private dodgeUntil = 0;
   private invulnerableUntil = 0;
   private dodgeDirection = new Phaser.Math.Vector2(1, 0);
+  private virtualDirection = new Phaser.Math.Vector2(0, 0);
   private nextCooldownSnapshotAt = 0;
   private hitStopUntil = 0;
   private questAccepted = false;
@@ -225,9 +226,14 @@ export class GameScene extends Phaser.Scene {
     if (this.status !== "PLAYING") return;
     if (command.type === "ATTACK") this.attackNearestMonster(this.time.now);
     else if (command.type === "DODGE") this.dodge(this.time.now);
+    else if (command.type === "INTERACT") this.interactWithLyra();
     else if (command.type === "SKILL") this.useSkill(command.skillIndex, this.time.now);
     else if (command.type === "POTION") this.usePotion();
     else this.equipItemAt(command.inventoryIndex);
+  }
+
+  setVirtualDirection(x: number, y: number) {
+    this.virtualDirection.set(x, y);
   }
 
   private createMap() {
@@ -542,8 +548,8 @@ export class GameScene extends Phaser.Scene {
       this.player.setVelocity(this.dodgeDirection.x * DODGE_SPEED, this.dodgeDirection.y * DODGE_SPEED);
       return;
     }
-    const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
-    const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
+    const horizontal = Phaser.Math.Clamp(Number(this.keys.right.isDown) - Number(this.keys.left.isDown) + this.virtualDirection.x, -1, 1);
+    const vertical = Phaser.Math.Clamp(Number(this.keys.down.isDown) - Number(this.keys.up.isDown) + this.virtualDirection.y, -1, 1);
     const velocity = new Phaser.Math.Vector2(horizontal, vertical);
     if (velocity.lengthSq() > 0) velocity.normalize().scale(PLAYER_SPEED);
     this.player.setVelocity(velocity.x, velocity.y);
@@ -561,8 +567,8 @@ export class GameScene extends Phaser.Scene {
 
   private dodge(time: number) {
     if (time < this.dodgeReadyAt) return;
-    const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
-    const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
+    const horizontal = Phaser.Math.Clamp(Number(this.keys.right.isDown) - Number(this.keys.left.isDown) + this.virtualDirection.x, -1, 1);
+    const vertical = Phaser.Math.Clamp(Number(this.keys.down.isDown) - Number(this.keys.up.isDown) + this.virtualDirection.y, -1, 1);
     this.dodgeDirection.set(horizontal, vertical);
     if (this.dodgeDirection.lengthSq() === 0) this.dodgeDirection.set(this.player.flipX ? -1 : 1, 0);
     this.dodgeDirection.normalize();
