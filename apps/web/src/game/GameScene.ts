@@ -38,18 +38,18 @@ const SHARD_TARGET = 3;
 const SIMULATION_STEP_MS = 50;
 
 const HERO_ART: Record<CharacterClass, string> = {
-  KNIGHT: `${import.meta.env.BASE_URL}art/hero-knight.png`,
-  ELF: `${import.meta.env.BASE_URL}art/hero-elf.png`,
-  MAGE: `${import.meta.env.BASE_URL}art/hero-mage.png`,
-  DARK_ELF: `${import.meta.env.BASE_URL}art/hero-dark-elf.png`
+  KNIGHT: `${import.meta.env.BASE_URL}art/hero-knight-game.webp`,
+  ELF: `${import.meta.env.BASE_URL}art/hero-elf-game.webp`,
+  MAGE: `${import.meta.env.BASE_URL}art/hero-mage-game.webp`,
+  DARK_ELF: `${import.meta.env.BASE_URL}art/hero-dark-elf-game.webp`
 };
 
 const MONSTER_ART: Record<MonsterKey, string> = {
-  SLIME: `${import.meta.env.BASE_URL}art/monster-slime.png`,
-  GOBLIN: `${import.meta.env.BASE_URL}art/monster-goblin.png`,
-  WOLF: `${import.meta.env.BASE_URL}art/monster-wolf.png`,
-  GOBLIN_CAPTAIN: `${import.meta.env.BASE_URL}art/monster-goblin.png`,
-  GOBLIN_KING: `${import.meta.env.BASE_URL}art/boss-gorvak.png`
+  SLIME: `${import.meta.env.BASE_URL}art/monster-slime-game.webp`,
+  GOBLIN: `${import.meta.env.BASE_URL}art/monster-goblin-game.webp`,
+  WOLF: `${import.meta.env.BASE_URL}art/monster-wolf-game.webp`,
+  GOBLIN_CAPTAIN: `${import.meta.env.BASE_URL}art/monster-goblin-game.webp`,
+  GOBLIN_KING: `${import.meta.env.BASE_URL}art/boss-gorvak-game.webp`
 };
 
 const ATTACK_RANGES: Record<CharacterClass, number> = {
@@ -152,10 +152,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.on("filecomplete", (key: string) => console.info(`[Eternal Realm] loaded ${key}`));
-    this.load.on("loaderror", (file: Phaser.Loader.File) => console.error(`[Eternal Realm] failed ${file.key}: ${file.src}`));
-    this.load.on("complete", () => console.info("[Eternal Realm] scene assets complete"));
-    this.load.image("meadow-ground", `${import.meta.env.BASE_URL}art/green-meadow-ground-v2.png`);
+    this.load.image("meadow-ground", `${import.meta.env.BASE_URL}art/green-meadow-ground-game.webp`);
     this.load.image("player-art", HERO_ART[this.characterClass]);
     for (const [monster, path] of Object.entries(MONSTER_ART)) {
       this.load.image(`monster-art-${monster}`, path);
