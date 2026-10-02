@@ -7,6 +7,8 @@ export interface GameSkillSnapshot {
   mpCost: number;
   ready: boolean;
   area: boolean;
+  color: number;
+  cooldownRemainingMs: number;
 }
 
 export interface QuestStepSnapshot {
@@ -16,6 +18,7 @@ export interface QuestStepSnapshot {
 
 export type GameCommand =
   | { id: number; type: "ATTACK" }
+  | { id: number; type: "DODGE" }
   | { id: number; type: "SKILL"; skillIndex: number }
   | { id: number; type: "POTION" }
   | { id: number; type: "EQUIP"; inventoryIndex: number };
@@ -41,6 +44,8 @@ export interface GameSnapshot {
   inventory: LootReward[];
   equipped: LootReward | null;
   potions: number;
+  dodgeReady: boolean;
+  dodgeCooldownRemainingMs: number;
   skills: GameSkillSnapshot[];
   questAccepted: boolean;
   questSteps: QuestStepSnapshot[];

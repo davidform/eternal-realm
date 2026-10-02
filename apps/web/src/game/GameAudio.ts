@@ -22,6 +22,10 @@ export class GameAudio {
     this.tone(105, 46, 0.14, "sawtooth", 0.045);
   }
 
+  dodge() {
+    this.tone(360, 120, 0.13, "triangle", 0.035);
+  }
+
   pickup(reward: LootReward) {
     const frequency = reward.kind === "GOLD" ? 740 : reward.kind === "BOSS_TREASURE" ? 480 : 560;
     this.tone(frequency, frequency * 1.35, 0.11, "sine", 0.04);

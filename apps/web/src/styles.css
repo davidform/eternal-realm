@@ -617,7 +617,7 @@ kbd {
 
 .action-bar > button {
   display: grid;
-  grid-template-columns: 50px minmax(0, 1fr) auto;
+  grid-template-columns: 28px 50px minmax(0, 1fr) auto;
   gap: 8px;
   align-items: center;
   min-height: 34px;
@@ -641,7 +641,22 @@ kbd {
 }
 
 .action-bar kbd { margin: 0; text-align: center; }
-.action-bar span { overflow: hidden; color: #dce6f5; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+.action-bar .action-name { overflow: hidden; color: #dce6f5; font-size: 0.7rem; text-overflow: ellipsis; white-space: nowrap; }
+.action-bar .action-icon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  place-items: center;
+  border: 1px solid currentColor;
+  border-radius: 7px;
+  color: #8fa7ca;
+  background: rgba(7, 12, 22, 0.68);
+  box-shadow: inset 0 0 12px currentColor;
+  font-size: 0.82rem;
+}
+.action-bar .action-icon--dodge { color: #6fc9ff; }
+.action-bar .action-icon--attack { color: #e8cf91; }
+.action-bar .action-icon--potion { color: #75dda7; }
 .action-bar small { color: #80cda8; font-size: 0.62rem; }
 .action-bar .action-slot--cooldown { opacity: 0.58; }
 .action-bar .action-slot--cooldown small,

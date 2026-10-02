@@ -18,6 +18,7 @@ Eternal Realm 的第一個可玩 Vertical Slice。本 repository 已建立 monor
 - **Playable Loadout**：四職業主動技能、MP／冷卻、三瓶治療藥水，以及拾取後裝備武器
 - **Boss Mechanics**：Gorvak Earthshake 範圍警示、可閃避傷害與半血狂暴階段
 - **Game Feel Pass**：角色與怪物待機／移動／攻擊／死亡動態、戰鬥與掉寶合成音效
+- **Combat Feel Pass II**：Shift 無敵翻滾、技能冷卻倒數、技能圖示、命中停頓／衝擊波，以及 Boss 技能名稱與階段標題
 - **Map Collision Pass**：Moonmere Pond、倒木、岩石與營地障礙具有玩家碰撞
 - **Skills & Equipment UI**：四職業各三個主動技能、獨立冷卻、單體／範圍傷害，以及可點選的武器裝備介面
 - **Chapter I Quest Chain**：清除前線、收集三枚碎片、Captain Ruk 精英戰、Gorvak 營地與寶藏結尾
@@ -70,6 +71,7 @@ pnpm dev
 遊戲操作：
 
 - `↑ ↓ ← →`：移動
+- `Shift`：朝移動方向翻滾；短暫無敵，冷卻 1.5 秒
 - `E`：與 Scout Lyra 對話並接取任務
 - `Space`：攻擊範圍內最近的敵人
 - `1`、`2`、`3`：施放三個職業主動技能

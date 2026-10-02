@@ -33,6 +33,10 @@ const WORLD_HEIGHT = 1_200;
 const PLAYER_START = { x: 330, y: 600 };
 const LYRA_POSITION = { x: 470, y: 600 };
 const PLAYER_SPEED = 245;
+const DODGE_SPEED = 620;
+const DODGE_DURATION_MS = 190;
+const DODGE_INVULNERABILITY_MS = 280;
+const DODGE_COOLDOWN_MS = 1_500;
 const HUNT_TARGET = 4;
 const SHARD_TARGET = 3;
 const SIMULATION_STEP_MS = 50;
@@ -111,7 +115,7 @@ export class GameScene extends Phaser.Scene {
   private playerScaleY = 1;
   private playerActionUntil = 0;
   private keys!: Record<
-    "up" | "down" | "left" | "right" | "attack" | "skill1" | "skill2" | "skill3" | "potion" | "interact" | "equip" | "restart",
+    "up" | "down" | "left" | "right" | "dodge" | "attack" | "skill1" | "skill2" | "skill3" | "potion" | "interact" | "equip" | "restart",
     Phaser.Input.Keyboard.Key
   >;
   private monsters: MonsterActor[] = [];
@@ -133,6 +137,13 @@ export class GameScene extends Phaser.Scene {
   private equipmentPower = 0;
   private potions = 3;
   private skillReady = [true, true, true];
+  private skillReadyAt = [0, 0, 0];
+  private dodgeReadyAt = 0;
+  private dodgeUntil = 0;
+  private invulnerableUntil = 0;
+  private dodgeDirection = new Phaser.Math.Vector2(1, 0);
+  private nextCooldownSnapshotAt = 0;
+  private hitStopUntil = 0;
   private questAccepted = false;
   private lyra!: Phaser.GameObjects.Container;
   private lyraPrompt!: Phaser.GameObjects.Text;
@@ -181,6 +192,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     if (this.status === "PLAYING") {
+      if (Phaser.Input.Keyboard.JustDown(this.keys.dodge)) this.dodge(time);
       this.updateMovement(time);
       if (Phaser.Input.Keyboard.JustDown(this.keys.attack)) this.attackNearestMonster(time);
       if (Phaser.Input.Keyboard.JustDown(this.keys.skill1)) this.useSkill(0, time);
@@ -203,11 +215,16 @@ export class GameScene extends Phaser.Scene {
 
     this.updateWorldLabels();
     this.updateQuestPrompt();
+    if (time >= this.nextCooldownSnapshotAt && (time < this.dodgeReadyAt || this.skillReadyAt.some((readyAt) => time < readyAt))) {
+      this.nextCooldownSnapshotAt = time + 100;
+      this.emitSnapshot();
+    }
   }
 
   runCommand(command: GameCommand) {
     if (this.status !== "PLAYING") return;
     if (command.type === "ATTACK") this.attackNearestMonster(this.time.now);
+    else if (command.type === "DODGE") this.dodge(this.time.now);
     else if (command.type === "SKILL") this.useSkill(command.skillIndex, this.time.now);
     else if (command.type === "POTION") this.usePotion();
     else this.equipItemAt(command.inventoryIndex);
@@ -502,6 +519,7 @@ export class GameScene extends Phaser.Scene {
       down: Phaser.Input.Keyboard.KeyCodes.DOWN,
       left: Phaser.Input.Keyboard.KeyCodes.LEFT,
       right: Phaser.Input.Keyboard.KeyCodes.RIGHT,
+      dodge: Phaser.Input.Keyboard.KeyCodes.SHIFT,
       attack: Phaser.Input.Keyboard.KeyCodes.SPACE,
       skill1: Phaser.Input.Keyboard.KeyCodes.ONE,
       skill2: Phaser.Input.Keyboard.KeyCodes.TWO,
@@ -520,6 +538,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateMovement(time: number) {
+    if (time < this.dodgeUntil) {
+      this.player.setVelocity(this.dodgeDirection.x * DODGE_SPEED, this.dodgeDirection.y * DODGE_SPEED);
+      return;
+    }
     const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
     const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
     const velocity = new Phaser.Math.Vector2(horizontal, vertical);
@@ -535,6 +557,42 @@ export class GameScene extends Phaser.Scene {
       this.playerScaleX * (1 + Math.abs(phase) * (moving ? 0.035 : 0.012)),
       this.playerScaleY * (1 - Math.abs(phase) * (moving ? 0.02 : 0.008))
     );
+  }
+
+  private dodge(time: number) {
+    if (time < this.dodgeReadyAt) return;
+    const horizontal = Number(this.keys.right.isDown) - Number(this.keys.left.isDown);
+    const vertical = Number(this.keys.down.isDown) - Number(this.keys.up.isDown);
+    this.dodgeDirection.set(horizontal, vertical);
+    if (this.dodgeDirection.lengthSq() === 0) this.dodgeDirection.set(this.player.flipX ? -1 : 1, 0);
+    this.dodgeDirection.normalize();
+    this.dodgeUntil = time + DODGE_DURATION_MS;
+    this.invulnerableUntil = time + DODGE_INVULNERABILITY_MS;
+    this.dodgeReadyAt = time + DODGE_COOLDOWN_MS;
+    this.playerActionUntil = this.dodgeUntil;
+    this.player.setAlpha(0.62).setTint(0x8bdcff).setAngle(this.dodgeDirection.x * 9);
+    this.audio.dodge();
+
+    for (let index = 1; index <= 3; index += 1) {
+      const echo = this.add.image(
+        this.player.x - this.dodgeDirection.x * index * 24,
+        this.player.y - this.dodgeDirection.y * index * 24,
+        "player-art"
+      )
+        .setScale(this.playerScaleX, this.playerScaleY)
+        .setFlipX(this.player.flipX)
+        .setTint(0x65bfff)
+        .setAlpha(0.24 / index)
+        .setDepth(7);
+      this.tweens.add({ targets: echo, alpha: 0, duration: 190 + index * 35, onComplete: () => echo.destroy() });
+    }
+
+    this.time.delayedCall(DODGE_DURATION_MS, () => {
+      if (this.status !== "PLAYING") return;
+      this.player.clearTint().setAlpha(1).setAngle(0).setScale(this.playerScaleX, this.playerScaleY);
+    });
+    this.time.delayedCall(DODGE_COOLDOWN_MS, () => this.emitSnapshot());
+    this.emitSnapshot();
   }
 
   private updateMonsters(time: number) {
@@ -555,6 +613,7 @@ export class GameScene extends Phaser.Scene {
           actor.sprite.setTint(0xff9866);
           this.unlockActors("BOSS_GUARD");
           this.cameras.main.shake(220, 0.003);
+          this.showBossBanner("PHASE II", "CROWN OF ASH", 0xff765c);
           this.pushLog("PHASE II — Gorvak summons two guards and gains Crown Charge!");
         }
         if (actor.casting) {
@@ -641,6 +700,8 @@ export class GameScene extends Phaser.Scene {
 
     target.currentHp = result.remainingHp;
     this.audio.hit(result.critical);
+    this.hitStop(result.critical ? 70 : 42);
+    this.playImpactShockwave(target.sprite.x, target.sprite.y, result.critical ? 0xffdf66 : 0xffffff, result.critical);
     this.flashTarget(target.sprite, result.critical ? 0xffdf66 : 0xffffff);
     this.showDamage(target.sprite.x, target.sprite.y - 36, result.damage, result.critical ? "#ffe16e" : "#ffffff");
     this.pushLog(`${result.critical ? "CRIT · " : ""}${result.damage} damage to ${target.definition.name}.`);
@@ -674,6 +735,7 @@ export class GameScene extends Phaser.Scene {
 
     this.playerMp -= skill.mpCost;
     this.skillReady[skillIndex] = false;
+    this.skillReadyAt[skillIndex] = time + skill.cooldownMs;
     this.lastCombatAt = time;
     this.audio.skill(this.characterClass);
     this.animatePlayerAttack(primaryTarget, time, true);
@@ -695,6 +757,7 @@ export class GameScene extends Phaser.Scene {
       hits += 1;
       totalDamage += result.damage;
       target.currentHp = result.remainingHp;
+      this.playImpactShockwave(target.sprite.x, target.sprite.y, skill.color, result.critical);
       this.showDamage(target.sprite.x, target.sprite.y - 44, result.damage, "#ffe27a");
       this.updateMonsterHealthBar(target);
       if (result.killed) this.handleMonsterDeath(target);
@@ -702,9 +765,11 @@ export class GameScene extends Phaser.Scene {
 
     this.time.delayedCall(skill.cooldownMs, () => {
       this.skillReady[skillIndex] = true;
+      this.skillReadyAt[skillIndex] = 0;
       this.emitSnapshot();
     });
 
+    if (hits > 0) this.hitStop(hits > 1 ? 65 : 48);
     this.pushLog(hits > 0 ? `${skill.name} hit ${hits} target${hits > 1 ? "s" : ""} for ${totalDamage} total damage!` : `${skill.name} missed.`);
   }
 
@@ -790,6 +855,7 @@ export class GameScene extends Phaser.Scene {
   private startBossSlam(actor: MonsterActor, time: number) {
     actor.casting = true;
     actor.specialReadyAt = time + (actor.enraged ? 4_500 : 6_000);
+    this.showBossCast(actor, actor.enraged ? "ENRAGED EARTHSHAKE" : "EARTHSHAKE", 0xff795f);
     this.pushLog(actor.enraged ? "Gorvak prepares an ENRAGED EARTHSHAKE — move!" : "Gorvak prepares EARTHSHAKE — move away!");
     const warning = this.add.circle(actor.sprite.x, actor.sprite.y, 28, 0xc43c32, 0.18)
       .setStrokeStyle(4, 0xff6b57, 0.9)
@@ -815,6 +881,7 @@ export class GameScene extends Phaser.Scene {
   private startBossCharge(actor: MonsterActor, time: number) {
     actor.casting = true;
     actor.specialReadyAt = time + 5_000;
+    this.showBossCast(actor, "CROWN CHARGE", 0xffad62);
     const targetX = this.player.x;
     const targetY = this.player.y;
     const warning = this.add.graphics().setDepth(2);
@@ -852,6 +919,10 @@ export class GameScene extends Phaser.Scene {
   }
 
   private applyBossSkillDamage(actor: MonsterActor, multiplier: number, skillName: string) {
+    if (this.time.now < this.invulnerableUntil) {
+      this.evadeAttack(skillName);
+      return;
+    }
     const result = skillAttack(
       this.createMonsterCombatant(actor),
       this.createPlayerCombatant(),
@@ -926,6 +997,28 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.shake(100, 0.002);
   }
 
+  private playImpactShockwave(x: number, y: number, color: number, strong = false) {
+    const ring = this.add.circle(x, y, strong ? 18 : 13, color, 0.12)
+      .setStrokeStyle(strong ? 5 : 3, color, 0.95)
+      .setDepth(10);
+    this.tweens.add({
+      targets: ring,
+      scale: strong ? 3.1 : 2.4,
+      alpha: 0,
+      duration: strong ? 240 : 170,
+      ease: "Cubic.Out",
+      onComplete: () => ring.destroy()
+    });
+  }
+
+  private hitStop(duration: number) {
+    this.hitStopUntil = Math.max(this.hitStopUntil, this.time.now + duration);
+    this.physics.world.pause();
+    this.time.delayedCall(duration, () => {
+      if (this.time.now >= this.hitStopUntil) this.physics.world.resume();
+    });
+  }
+
   private monsterAttack(actor: MonsterActor, time: number) {
     actor.nextAttackAt = time + actor.definition.attackIntervalMs;
     actor.actionUntil = time + 170;
@@ -933,6 +1026,10 @@ export class GameScene extends Phaser.Scene {
     actor.sprite.setFlipX(direction < 0);
     actor.sprite.setAngle(direction * 8).setScale(actor.baseScaleX * 1.08, actor.baseScaleY * 0.93);
     this.lastCombatAt = time;
+    if (time < this.invulnerableUntil) {
+      this.evadeAttack(actor.definition.name);
+      return;
+    }
     const result = basicAttack(this.createMonsterCombatant(actor), this.createPlayerCombatant());
     if (!result.hit) {
       this.pushLog(`${actor.definition.name} missed you.`);
@@ -949,6 +1046,21 @@ export class GameScene extends Phaser.Scene {
       this.player.setTint(0x555555).setAlpha(0.55).setVelocity(0, 0);
       this.pushLog("You were defeated. Press R or choose New Run.");
     } else this.emitSnapshot();
+  }
+
+  private evadeAttack(source: string) {
+    const text = this.add.text(this.player.x, this.player.y - 52, "DODGE", {
+      color: "#9be4ff",
+      fontFamily: "system-ui",
+      fontSize: "18px",
+      fontStyle: "bold",
+      stroke: "#0b2940",
+      strokeThickness: 4
+    }).setOrigin(0.5).setDepth(12);
+    this.tweens.add({ targets: text, y: text.y - 28, alpha: 0, duration: 520, ease: "Cubic.Out", onComplete: () => text.destroy() });
+    this.playImpactShockwave(this.player.x, this.player.y, 0x7dd7ff);
+    this.cameras.main.shake(70, 0.0015);
+    this.pushLog(`Perfect dodge — ${source} missed!`);
   }
 
   private handleMonsterDeath(actor: MonsterActor) {
@@ -1049,7 +1161,46 @@ export class GameScene extends Phaser.Scene {
     this.boss.label.setText(this.boss.definition.name);
     this.audio.bossAwaken();
     this.cameras.main.shake(260, 0.004);
+    this.showBossBanner("BOSS AWAKENED", "GORVAK, THE FALSE CROWN", 0xffc15c);
     this.pushLog("BOSS TERRITORY — Goblin King Gorvak has awakened!");
+  }
+
+  private showBossBanner(kicker: string, title: string, color: number) {
+    const x = this.cameras.main.width / 2;
+    const panel = this.add.rectangle(0, 0, Math.min(650, this.cameras.main.width - 80), 72, 0x080d17, 0.86)
+      .setStrokeStyle(1, color, 0.72);
+    const kickerText = this.add.text(0, -13, kicker, {
+      color: `#${color.toString(16).padStart(6, "0")}`,
+      fontFamily: "system-ui",
+      fontSize: "11px",
+      fontStyle: "bold",
+      letterSpacing: 4
+    }).setOrigin(0.5);
+    const titleText = this.add.text(0, 13, title, {
+      color: "#f5f1e7",
+      fontFamily: "Georgia",
+      fontSize: "22px"
+    }).setOrigin(0.5);
+    const banner = this.add.container(x, 78, [panel, kickerText, titleText])
+      .setScrollFactor(0)
+      .setDepth(40)
+      .setAlpha(0);
+    this.tweens.add({ targets: banner, alpha: 1, y: 90, duration: 220, ease: "Cubic.Out" });
+    this.time.delayedCall(1_650, () => {
+      this.tweens.add({ targets: banner, alpha: 0, y: 78, duration: 260, onComplete: () => banner.destroy(true) });
+    });
+  }
+
+  private showBossCast(actor: MonsterActor, name: string, color: number) {
+    const label = this.add.text(actor.sprite.x, actor.sprite.y - 92, name, {
+      color: `#${color.toString(16).padStart(6, "0")}`,
+      fontFamily: "system-ui",
+      fontSize: "13px",
+      fontStyle: "bold",
+      backgroundColor: "#090d16dd",
+      padding: { x: 8, y: 4 }
+    }).setOrigin(0.5).setDepth(15);
+    this.tweens.add({ targets: label, y: label.y - 10, alpha: 0, delay: 580, duration: 340, onComplete: () => label.destroy() });
   }
 
   private spawnLoot(x: number, y: number, rewards: LootReward[]) {
@@ -1284,6 +1435,7 @@ export class GameScene extends Phaser.Scene {
 
   private emitSnapshot() {
     const story = this.storyBeat();
+    const now = this.time.now;
     this.onSnapshot({
       status: this.status,
       playerHp: this.playerHp,
@@ -1305,11 +1457,15 @@ export class GameScene extends Phaser.Scene {
       inventory: this.inventory,
       equipped: this.equipped,
       potions: this.potions,
+      dodgeReady: now >= this.dodgeReadyAt,
+      dodgeCooldownRemainingMs: Math.max(0, this.dodgeReadyAt - now),
       skills: CLASS_SKILLS[this.characterClass].map((skill, index) => ({
         name: skill.name,
         mpCost: skill.mpCost,
-        ready: this.skillReady[index] ?? true,
-        area: skill.area
+        ready: (this.skillReady[index] ?? true) && now >= (this.skillReadyAt[index] ?? 0),
+        area: skill.area,
+        color: skill.color,
+        cooldownRemainingMs: Math.max(0, (this.skillReadyAt[index] ?? 0) - now)
       })),
       questAccepted: this.questAccepted,
       questSteps: this.questSteps(),

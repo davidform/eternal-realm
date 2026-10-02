@@ -34,6 +34,7 @@ interface ChapterSave {
 
 type GameCommandRequest =
   | { type: "ATTACK" }
+  | { type: "DODGE" }
   | { type: "SKILL"; skillIndex: number }
   | { type: "POTION" }
   | { type: "EQUIP"; inventoryIndex: number };
@@ -82,11 +83,15 @@ function createInitialSnapshot(characterClass: CharacterClass, status: RunStatus
     inventory: [],
     equipped: null,
     potions: 3,
+    dodgeReady: true,
+    dodgeCooldownRemainingMs: 0,
     skills: CLASS_SKILLS[characterClass].map((skill) => ({
       name: skill.name,
       mpCost: skill.mpCost,
       ready: true,
-      area: skill.area
+      area: skill.area,
+      color: skill.color,
+      cooldownRemainingMs: 0
     })),
     questAccepted: false,
     questSteps: [
@@ -313,6 +318,7 @@ export function App() {
 
           <div className="controls-hint">
             <span><kbd>↑ ↓ ← →</kbd> Move</span>
+            <span><kbd>Shift</kbd> Dodge</span>
             <span><kbd>E</kbd> Talk</span>
             <span><kbd>Space / 1–3</kbd> Attack / Skills</span>
             <span><kbd>Q / F</kbd> Potion / Equip</span>
@@ -343,8 +349,17 @@ export function App() {
 
           <GamePanel title="Action Bar">
             <div className="action-bar">
+              <button
+                className={snapshot.dodgeReady ? "" : "action-slot--cooldown"}
+                disabled={!isPlaying || !snapshot.dodgeReady}
+                onClick={() => sendCommand({ type: "DODGE" })}
+                type="button"
+              >
+                <span className="action-icon action-icon--dodge">➜</span><kbd>Shift</kbd><span className="action-name">Dodge</span>
+                <small>{snapshot.dodgeReady ? "Invulnerable dash" : `${(snapshot.dodgeCooldownRemainingMs / 1000).toFixed(1)}s`}</small>
+              </button>
               <button disabled={!isPlaying} onClick={() => sendCommand({ type: "ATTACK" })} type="button">
-                <kbd>Space</kbd><span>Basic Attack</span><small>Ready</small>
+                <span className="action-icon action-icon--attack">⚔</span><kbd>Space</kbd><span className="action-name">Basic Attack</span><small>Ready</small>
               </button>
               {snapshot.skills.map((skill, index) => (
                 <button
@@ -354,7 +369,11 @@ export function App() {
                   onClick={() => sendCommand({ type: "SKILL", skillIndex: index })}
                   type="button"
                 >
-                  <kbd>{index + 1}</kbd><span>{skill.name}</span><small>{skill.ready ? `${skill.mpCost} MP · ${skill.area ? "AoE" : "Single"}` : "Recharging"}</small>
+                  <span className="action-icon" style={{ borderColor: `#${skill.color.toString(16).padStart(6, "0")}`, color: `#${skill.color.toString(16).padStart(6, "0")}` }}>
+                    {index === 0 ? "◆" : index === 1 ? "✦" : "✹"}
+                  </span>
+                  <kbd>{index + 1}</kbd><span className="action-name">{skill.name}</span>
+                  <small>{skill.ready ? `${skill.mpCost} MP · ${skill.area ? "AoE" : "Single"}` : `${(skill.cooldownRemainingMs / 1000).toFixed(1)}s`}</small>
                 </button>
               ))}
               <button
@@ -363,7 +382,7 @@ export function App() {
                 onClick={() => sendCommand({ type: "POTION" })}
                 type="button"
               >
-                <kbd>Q</kbd><span>Healing Potion</span><small>{snapshot.potions} left</small>
+                <span className="action-icon action-icon--potion">✚</span><kbd>Q</kbd><span className="action-name">Healing Potion</span><small>{snapshot.potions} left</small>
               </button>
             </div>
           </GamePanel>
